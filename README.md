@@ -13,20 +13,20 @@ The shells only tests in macOS terminal, may need some changes on other platform
 ## Install
 
 ```
-bash -c "$(curl -sS URL)"
+bash -c "$(curl -sS https://raw.githubusercontent.com/wwwenjie/git-commit-cli/main/install.sh)"
 ```
 
 ## Usage
 
-- `commit`: add **all** files to git stage and commit
+- `commit` -> add **all** files to git stage and commit
 
-- `commit --clean`: clean commit history
+- `commit --clean` -> clean commit history
 
-- `commit --config`: set commit message username
+- `commit --config` -> set commit message username
 
-- `commit --update`: update git-commit-cli
+- `commit --update` -> update git-commit-cli
 
-- `commit --uninstall`: uninstall git-commit-cli
+- `commit --uninstall` -> uninstall git-commit-cli
 
 ## Contribute
 
