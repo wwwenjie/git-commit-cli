@@ -1,5 +1,5 @@
 SHELL_LOCATION="/usr/local/bin/commit"
-SHELL_REMOTE_URL=""
+SHELL_REMOTE_URL="https://raw.githubusercontent.com/wwwenjie/git-commit-cli/main/commit"
 
 ESC=$(printf "\033")
 RED=$ESC[31m

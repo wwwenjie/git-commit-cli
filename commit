@@ -5,8 +5,8 @@ FILE_CHECKSUM=""
 
 SHELL_LOCATION="/usr/local/bin/commit"
 HISTORY_LOCATION="/Users/$USER/.commit_history"
-SHELL_REMOTE_URL=""
-INSTALL_REMOTE_URL=""
+SHELL_REMOTE_URL="https://raw.githubusercontent.com/wwwenjie/git-commit-cli/main/commit"
+INSTALL_REMOTE_URL="https://raw.githubusercontent.com/wwwenjie/git-commit-cli/main/install.sh"
 
 ESC=$(printf "\033")
 RED=$ESC[31m
