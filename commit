@@ -1,0 +1,197 @@
+#!/usr/bin/env bash
+
+GIT_USERNAME="username"
+FILE_CHECKSUM=""
+
+SHELL_LOCATION="/usr/local/bin/commit"
+HISTORY_LOCATION="/Users/$USER/.commit_history"
+SHELL_REMOTE_URL=""
+INSTALL_REMOTE_URL=""
+
+ESC=$(printf "\033")
+RED=$ESC[31m
+GREEN=$ESC[32m
+RESET=$ESC[0m
+
+function resetColor {
+    echo "$RESET"
+}
+
+function help {
+    echo
+    echo "$GREEN--clean$RESET clean commit history"
+    echo
+    echo "$GREEN--config$RESET set commit message username"
+    echo
+    echo "$GREEN--update$RESET update git-commit-cli"
+    echo
+    echo "$GREEN--uninstall$RESET uninstall git-commit-cli"
+}
+
+function uninstall {
+    rm -f $SHELL_LOCATION
+    echo "${GREEN}git-commit-cli uninstalled"
+}
+
+function selectOption {
+    cursor_blink_on() { printf "$ESC[?25h"; }
+    cursor_blink_off() { printf "$ESC[?25l"; }
+    cursor_to() { printf "$ESC[$1;${2:-1}H"; }
+    print_option() { printf "   $1"; }
+    print_selected() { printf "$GREEN > $1$RESET"; }
+    get_cursor_row() {
+        IFS=';' read -sdR -p $'\E[6n' ROW COL
+        echo ${ROW#*[}
+    }
+    key_input() {
+        read -s -n3 key 2>/dev/null >&2
+        if [[ $key = $ESC[A ]]; then echo up; fi
+        if [[ $key = $ESC[B ]]; then echo down; fi
+        if [[ $key = "" ]]; then echo enter; fi
+    }
+
+    # initially print empty new lines (scroll down if at bottom of screen)
+    for opt; do printf "\n"; done
+
+    # determine current screen position for overwriting the options
+    local lastrow=$(get_cursor_row)
+    local startrow=$(($lastrow - $#))
+
+    # ensure cursor and input echoing back on upon a ctrl+c during read -s
+    trap "cursor_blink_on; stty echo; printf '\n'; exit" 2
+    cursor_blink_off
+
+    local selected=0
+    while true; do
+        # print options by overwriting the last lines
+        local idx=0
+        for opt; do
+            cursor_to $(($startrow + $idx))
+            if [ $idx -eq $selected ]; then
+                print_selected "$opt"
+            else
+                print_option "$opt"
+            fi
+            ((idx++))
+        done
+
+        # user key control
+        case $(key_input) in
+        enter) break ;;
+        up)
+            ((selected--))
+            if [ $selected -lt 0 ]; then selected=$(($# - 1)); fi
+            ;;
+        down)
+            ((selected++))
+            if [ $selected -ge $# ]; then selected=0; fi
+            ;;
+        esac
+    done
+
+    # cursor position back to normal
+    cursor_to $lastrow
+    cursor_blink_on
+
+    echo
+
+    return $selected
+}
+
+function handleOption {
+    while [[ $# > 0 ]]; do
+        key="$1"
+        case $key in
+        --help)
+            help
+            exit
+            ;;
+        --clean)
+            echo "" >$HISTORY_LOCATION
+            echo "${GREEN}commit history cleaned!"
+            exit
+            ;;
+        --config)
+            echo "How would you like your name to be shown in git?"
+            read -ep $GREEN gitUserName
+            resetColor
+            newNameCofig="GIT_USERNAME=\"${gitUserName}\""
+            sed -i "" "s/^GIT_USERNAME=.*/${newNameCofig}/" $SHELL_LOCATION
+            echo "Username has been set, you can use commit --config to reset"
+            echo "This is what your message looks like:"
+            echo "$GREEN[$gitUserName] #01 chore: give myself a cool name"
+            exit
+            ;;
+        --update)
+            remoteCheckSum=$(curl -sS $SHELL_REMOTE_URL | shasum -a 256)
+            if [[ $remoteCheckSum = $FILE_CHECKSUM ]]; then
+                echo "${GREEN}commit is already update to date"
+                exit
+            fi
+            echo "${GREEN}Find new version, fetching...$RESET"
+            bash -c "$(curl -sS $INSTALL_REMOTE_URL)"
+            echo
+            echo "${GREEN}Update finish"
+            exit
+            ;;
+        --uninstall)
+            uninstall
+            exit
+            ;;
+        *)
+            echo "${RED}Unkown option: ${1}${RESET}"
+            exit
+            ;;
+        esac
+        shift 1
+    done
+}
+
+function main {
+    echo "Select the type of change you're committing: (Use arrow keys)"
+
+    options=("feat" "fix" "refactor" "test" "chore" "style" "docs")
+
+    selectOption "${options[@]}"
+
+    commitType=${options[$?]}
+
+    echo "Which card do you work for?"
+
+    recent_card_numbers=$(tail -1000 $HISTORY_LOCATION 2>/dev/null | sort -nr | awk '!a[$2]++{print$2}' | head -5)
+
+    card_numbers=("input manually" $recent_card_numbers)
+    selectOption "${card_numbers[@]}"
+    index=$?
+    if [[ ${card_numbers[$index]} = "input manually" ]]; then
+        echo "Input card number:"
+        read -ep $GREEN cardNumber
+        resetColor
+    else
+        cardNumber=${card_numbers[$index]}
+    fi
+
+    if [[ ! -n "$cardNumber" ]]; then
+        echo -e "$RED card number is required, if you are not working for any card, you can use N/A"
+        exit
+    fi
+
+    echo "What did this commit do?"
+    read -ep $GREEN message
+    resetColor
+
+    if [[ ! -n "$message" ]]; then
+        echo -e "$RED commit message is required"
+        exit
+    fi
+
+    git add .
+    git commit -m "[$GIT_USERNAME] #$cardNumber $commitType: $message"
+
+    # no matter if git commit success, it will create a history to help user select card number
+    echo "$(date '+%s') $cardNumber $commitType: $message" >>$HISTORY_LOCATION
+}
+
+handleOption $*
+
+main
