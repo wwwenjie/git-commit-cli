@@ -125,7 +125,7 @@ function handleOption {
         --update)
             remoteCheckSum=$(curl -sS $SHELL_REMOTE_URL | shasum -a 256)
             if [[ $remoteCheckSum = $FILE_CHECKSUM ]]; then
-                echo "${GREEN}commit is already update to date"
+                echo "${GREEN}git-commit-cli is already update to date"
                 exit
             fi
             echo "${GREEN}Find new version, fetching...$RESET"
