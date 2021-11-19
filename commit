@@ -156,7 +156,7 @@ function main {
 
     commitType=${options[$?]}
 
-    echo "Which card do you work for?"
+    echo "Which card do you work for? (Use arrow keys)"
 
     recent_card_numbers=$(tail -1000 $HISTORY_LOCATION 2>/dev/null | sort -nr | awk '!a[$2]++{print$2}' | head -5)
 
