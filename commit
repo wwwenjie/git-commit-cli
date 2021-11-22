@@ -44,10 +44,16 @@ function selectOption {
         echo ${ROW#*[}
     }
     key_input() {
-        read -s -n3 key 2>/dev/null >&2
-        if [[ $key = $ESC[A ]]; then echo up; fi
-        if [[ $key = $ESC[B ]]; then echo down; fi
-        if [[ $key = "" ]]; then echo enter; fi
+        local key
+        read -rsn1 key 2>/dev/null >&2
+        if [[ $key = ""      ]]; then echo enter; fi;
+        if [[ $key = "k" ]]; then echo up; fi;
+        if [[ $key = "j" ]]; then echo down; fi;
+        if [[ $key = $'\x1b' ]]; then
+            read -rsn2 key
+            if [[ $key = [A || $key = k ]]; then echo up;    fi;
+            if [[ $key = [B || $key = j ]]; then echo down;  fi;
+        fi
     }
 
     # initially print empty new lines (scroll down if at bottom of screen)
