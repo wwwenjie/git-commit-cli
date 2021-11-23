@@ -18,6 +18,8 @@ bash -c "$(curl -sS https://raw.githubusercontent.com/wwwenjie/git-commit-cli/ma
 
 ## Usage
 
+![screenshot](assets/screenshot.gif)
+
 - `commit` -> add **all** files to git stage and commit
 
 - `commit --clean` -> clean commit history
