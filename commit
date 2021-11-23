@@ -33,6 +33,55 @@ function uninstall {
     echo "${GREEN}git-commit-cli uninstalled"
 }
 
+function handleOption {
+    while [[ $# > 0 ]]; do
+        key="$1"
+        case $key in
+        --help)
+            help
+            exit
+            ;;
+        --clean)
+            echo "" >$HISTORY_LOCATION
+            echo "${GREEN}commit history cleaned!"
+            exit
+            ;;
+        --config)
+            echo "How would you like your name to be shown in git?"
+            read -ep $GREEN gitUserName
+            resetColor
+            newNameCofig="GIT_USERNAME=\"${gitUserName}\""
+            sed -i "" "s/^GIT_USERNAME=.*/${newNameCofig}/" $SHELL_LOCATION
+            echo "Username has been set, you can use commit --config to reset"
+            echo "This is what your message looks like:"
+            echo "$GREEN[$gitUserName] #01 chore: give myself a cool name"
+            exit
+            ;;
+        --update)
+            remoteCheckSum=$(curl -sS $SHELL_REMOTE_URL | shasum -a 256)
+            if [[ $remoteCheckSum = $FILE_CHECKSUM ]]; then
+                echo "${GREEN}git-commit-cli is already update to date"
+                exit
+            fi
+            echo "${GREEN}Find new version, fetching...$RESET"
+            bash -c "$(curl -sS $INSTALL_REMOTE_URL)"
+            echo
+            echo "${GREEN}Update finish"
+            exit
+            ;;
+        --uninstall)
+            uninstall
+            exit
+            ;;
+        *)
+            echo "${RED}Unkown option: ${1}${RESET}"
+            exit
+            ;;
+        esac
+        shift 1
+    done
+}
+
 function selectOption {
     cursor_blink_on() { printf "$ESC[?25h"; }
     cursor_blink_off() { printf "$ESC[?25l"; }
@@ -46,13 +95,13 @@ function selectOption {
     key_input() {
         local key
         read -rsn1 key 2>/dev/null >&2
-        if [[ $key = ""      ]]; then echo enter; fi;
-        if [[ $key = "k" ]]; then echo up; fi;
-        if [[ $key = "j" ]]; then echo down; fi;
+        if [[ $key = "" ]]; then echo enter; fi
+        if [[ $key = "k" ]]; then echo up; fi
+        if [[ $key = "j" ]]; then echo down; fi
         if [[ $key = $'\x1b' ]]; then
             read -rsn2 key
-            if [[ $key = [A || $key = k ]]; then echo up;    fi;
-            if [[ $key = [B || $key = j ]]; then echo down;  fi;
+            if [[ $key = [A || $key = k ]]; then echo up; fi
+            if [[ $key = [B || $key = j ]]; then echo down; fi
         fi
     }
 
@@ -104,84 +153,53 @@ function selectOption {
     return $selected
 }
 
-function handleOption {
-    while [[ $# > 0 ]]; do
-        key="$1"
-        case $key in
-        --help)
-            help
-            exit
-            ;;
-        --clean)
-            echo "" >$HISTORY_LOCATION
-            echo "${GREEN}commit history cleaned!"
-            exit
-            ;;
-        --config)
-            echo "How would you like your name to be shown in git?"
-            read -ep $GREEN gitUserName
-            resetColor
-            newNameCofig="GIT_USERNAME=\"${gitUserName}\""
-            sed -i "" "s/^GIT_USERNAME=.*/${newNameCofig}/" $SHELL_LOCATION
-            echo "Username has been set, you can use commit --config to reset"
-            echo "This is what your message looks like:"
-            echo "$GREEN[$gitUserName] #01 chore: give myself a cool name"
-            exit
-            ;;
-        --update)
-            remoteCheckSum=$(curl -sS $SHELL_REMOTE_URL | shasum -a 256)
-            if [[ $remoteCheckSum = $FILE_CHECKSUM ]]; then
-                echo "${GREEN}git-commit-cli is already update to date"
-                exit
-            fi
-            echo "${GREEN}Find new version, fetching...$RESET"
-            bash -c "$(curl -sS $INSTALL_REMOTE_URL)"
-            echo
-            echo "${GREEN}Update finish"
-            exit
-            ;;
-        --uninstall)
-            uninstall
-            exit
-            ;;
-        *)
-            echo "${RED}Unkown option: ${1}${RESET}"
-            exit
-            ;;
-        esac
-        shift 1
-    done
-}
-
-function main {
+function getCommitType {
     echo "Select the type of change you're committing: (Use arrow keys)"
 
-    options=("feat" "fix" "refactor" "test" "chore" "style" "docs")
+    local options=("feat" "fix" "refactor" "test" "chore" "style" "docs")
 
     selectOption "${options[@]}"
 
     commitType=${options[$?]}
+}
 
-    echo "Which card do you work for? (Use arrow keys)"
-
-    recent_card_numbers=$(tail -1000 $HISTORY_LOCATION 2>/dev/null | sort -nr | awk '!a[$2]++{print$2}' | head -5)
-
-    card_numbers=("input manually" $recent_card_numbers)
-    selectOption "${card_numbers[@]}"
-    index=$?
-    if [[ ${card_numbers[$index]} = "input manually" ]]; then
+function getCardNumber {
+    function inputCardNumber {
         echo "Input card number:"
         read -ep $GREEN cardNumber
         resetColor
+    }
+
+    function checkCardNumberIsFilled {
+        if [[ ! -n "$cardNumber" ]]; then
+            echo -e "$RED card number is required, if you are not working for any card, you can use N/A"
+            exit
+        fi
+    }
+
+    local recent_card_numbers=$(tail -1000 $HISTORY_LOCATION 2>/dev/null | sort -nr | awk '!a[$2]++{print$2}' | head -5)
+
+    if [[ ! -n "$recent_card_numbers" ]]; then
+        inputCardNumber
+        checkCardNumberIsFilled
+        return
+    fi
+
+    echo "Which card do you work for? (Use arrow keys)"
+
+    local card_numbers=("input manually" $recent_card_numbers)
+    selectOption "${card_numbers[@]}"
+    local index=$?
+    if [[ ${card_numbers[$index]} = "input manually" ]]; then
+        inputCardNumber
     else
         cardNumber=${card_numbers[$index]}
     fi
 
-    if [[ ! -n "$cardNumber" ]]; then
-        echo -e "$RED card number is required, if you are not working for any card, you can use N/A"
-        exit
-    fi
+    checkCardNumberIsFilled
+}
 
+function getCommitMessage {
     echo "What did this commit do?"
     read -ep $GREEN message
     resetColor
@@ -190,6 +208,14 @@ function main {
         echo -e "$RED commit message is required"
         exit
     fi
+}
+
+function main {
+    getCommitType
+
+    getCardNumber
+
+    getCommitMessage
 
     git add .
     git commit -m "[$GIT_USERNAME] #$cardNumber $commitType: $message"
