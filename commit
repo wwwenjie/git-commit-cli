@@ -26,11 +26,44 @@ function help {
     echo "$GREEN--update$RESET update git-commit-cli"
     echo
     echo "$GREEN--uninstall$RESET uninstall git-commit-cli"
+    exit
+}
+
+function clean {
+    echo "" >$HISTORY_LOCATION
+    echo "${GREEN}commit history cleaned!"
+    exit
+}
+
+function config {
+    echo "How would you like your name to be shown in git?"
+    read -ep $GREEN gitUserName
+    resetColor
+    local newNameCofig="GIT_USERNAME=\"${gitUserName}\""
+    sed -i "" "s/^GIT_USERNAME=.*/${newNameCofig}/" $SHELL_LOCATION
+    echo "Username has been set, you can use commit --config to reset"
+    echo "This is what your message looks like:"
+    echo "$GREEN[$gitUserName] #01 chore: give myself a cool name"
+    exit
+}
+
+function update {
+    remoteCheckSum=$(curl -sS $SHELL_REMOTE_URL | shasum -a 256)
+    if [[ $remoteCheckSum = $FILE_CHECKSUM ]]; then
+        echo "${GREEN}git-commit-cli is already update to date"
+        exit
+    fi
+    echo "${GREEN}Find new version, fetching...$RESET"
+    bash -c "$(curl -sS $INSTALL_REMOTE_URL)"
+    echo
+    echo "${GREEN}Update finish"
+    exit
 }
 
 function uninstall {
     rm -f $SHELL_LOCATION
     echo "${GREEN}git-commit-cli uninstalled"
+    exit
 }
 
 function handleOption {
@@ -39,39 +72,18 @@ function handleOption {
         case $key in
         --help)
             help
-            exit
             ;;
         --clean)
-            echo "" >$HISTORY_LOCATION
-            echo "${GREEN}commit history cleaned!"
-            exit
+            clean
             ;;
         --config)
-            echo "How would you like your name to be shown in git?"
-            read -ep $GREEN gitUserName
-            resetColor
-            newNameCofig="GIT_USERNAME=\"${gitUserName}\""
-            sed -i "" "s/^GIT_USERNAME=.*/${newNameCofig}/" $SHELL_LOCATION
-            echo "Username has been set, you can use commit --config to reset"
-            echo "This is what your message looks like:"
-            echo "$GREEN[$gitUserName] #01 chore: give myself a cool name"
-            exit
+            config
             ;;
         --update)
-            remoteCheckSum=$(curl -sS $SHELL_REMOTE_URL | shasum -a 256)
-            if [[ $remoteCheckSum = $FILE_CHECKSUM ]]; then
-                echo "${GREEN}git-commit-cli is already update to date"
-                exit
-            fi
-            echo "${GREEN}Find new version, fetching...$RESET"
-            bash -c "$(curl -sS $INSTALL_REMOTE_URL)"
-            echo
-            echo "${GREEN}Update finish"
-            exit
+            update
             ;;
         --uninstall)
             uninstall
-            exit
             ;;
         *)
             echo "${RED}Unkown option: ${1}${RESET}"
