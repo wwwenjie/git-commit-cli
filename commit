@@ -21,7 +21,7 @@ function resetColor {
 
 function help {
     echo
-    echo "$GREEN--stage$RESET only commit staged files"
+    echo "$GREEN--stage$RESET commit staged files"
     echo
     echo "$GREEN--clean$RESET clean commit history"
     echo

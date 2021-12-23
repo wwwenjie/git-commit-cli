@@ -22,6 +22,10 @@ bash -c "$(curl -sS https://raw.githubusercontent.com/wwwenjie/git-commit-cli/ma
 
 - `commit` -> add **all** files to git stage and commit
 
+- `commit --help` -> show help
+
+- `commit --stage` -> commit staged files
+
 - `commit --clean` -> clean commit history
 
 - `commit --config` -> set commit message username
