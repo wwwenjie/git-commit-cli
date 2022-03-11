@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 GIT_USERNAME="username"
+GIT_MESSAGE_FORMAT="STANDARD"
 FILE_CHECKSUM=""
 
 SHELL_LOCATION="/usr/local/bin/commit"
@@ -40,14 +41,38 @@ function clean {
 }
 
 function config {
-    echo "How would you like your name to be shown in git?"
-    read -ep $GREEN gitUserName
-    resetColor
-    local newNameCofig="GIT_USERNAME=\"${gitUserName}\""
-    sed -i "" "s/^GIT_USERNAME=.*/${newNameCofig}/" $SHELL_LOCATION
-    echo "Username has been set, you can use commit --config to reset"
+    echo "Select the format of message you're committing: (Use arrow keys)"
+    echo
+    echo "STANDARD: ${GREEN}[username] #01 chore: config git-commit-cli${RESET}"
+    echo "SIMPLE:   ${GREEN}chore: config git-commit-cli"
+    echo
+
+    local options=("STANDARD" "SIMPLE")
+
+    selectOption "${options[@]}"
+
+    local messageFormat=${options[$?]}
+
+    local newMessageFormatConfig="GIT_MESSAGE_FORMAT=\"${messageFormat}\""
+
+    sed -i "" "s/^GIT_MESSAGE_FORMAT=.*/${newMessageFormatConfig}/" $SHELL_LOCATION
+
+    if [[ $messageFormat = "STANDARD" ]]; then
+        echo "How would you like your name to be shown in git?"
+        read -ep $GREEN gitUserName
+        resetColor
+
+        local newNameCofig="GIT_USERNAME=\"${gitUserName}\""
+        sed -i "" "s/^GIT_USERNAME=.*/${newNameCofig}/" $SHELL_LOCATION
+    fi
+
+    echo "Config has been set, you can use commit --config to reset"
     echo "This is what your message looks like:"
-    echo "$GREEN[$gitUserName] #01 chore: give myself a cool name"
+    if [[ $messageFormat = "STANDARD" ]]; then
+        echo "$GREEN[$gitUserName] #01 chore: config git-commit-cli"
+    else
+        echo "${GREEN}chore: config git-commit-cli"
+    fi
     exit
 }
 
@@ -236,7 +261,11 @@ function getCommitMessage {
 function main {
     getCommitType
 
-    getCardNumber
+    if [[ $GIT_MESSAGE_FORMAT = "STANDARD" ]]; then
+        getCardNumber
+    else
+        cardNumber="N/A"
+    fi
 
     getCommitMessage
 
@@ -244,7 +273,13 @@ function main {
         git add .
     fi
 
-    git commit -m "[$GIT_USERNAME] #$cardNumber $commitType: $message"
+    if [[ $GIT_MESSAGE_FORMAT = "SIMPLE" ]]; then
+        git commit -m "$commitType: $message"
+    fi
+
+    if [[ $GIT_MESSAGE_FORMAT = "STANDARD" ]]; then
+        git commit -m "[$GIT_USERNAME] #$cardNumber $commitType: $message"
+    fi
 
     # no matter if git commit success, it will create a history to help user select card number
     echo "$(date '+%s') $cardNumber $commitType: $message" >>$HISTORY_LOCATION
